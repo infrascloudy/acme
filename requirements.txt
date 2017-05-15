@@ -1,0 +1,5 @@
+netaddr
+argparse
+passlib
+pip
+ansible
