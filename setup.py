@@ -241,6 +241,7 @@ setup_dict = dict(
     maintainer_email=metadata.emails[0],
     url=metadata.url,
     description=metadata.description,
+    # TODO: See why enabling this breaks the linter
     # long_description=read('README.md'),
     # Find a list of classifiers here:
     # <http://pypi.python.org/pypi?%3Aaction=list_classifiers>
