@@ -122,6 +122,9 @@ Authors
 * InfrasCloudy
 * Allanice001
 
+.. |CII Best Practices| image:: https://bestpractices.coreinfrastructure.org/projects/237/badge
+   :target: https://bestpractices.coreinfrastructure.org/projects/237
+
 ..
  Local Variables:
  mode: rst
