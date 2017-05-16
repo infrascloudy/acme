@@ -2,6 +2,9 @@
 Acme
 ====
 
+.. image:: https://travis-ci.org/infrascloudy/acme.svg?branch=master
+    :target: https://travis-ci.org/infrascloudy/acme
+
 |CII Best Practices|
 
 **Your Linux-based data center in a box**

@@ -8,10 +8,15 @@ from __future__ import print_function
 import sys
 import os
 import ConfigParser
+import subprocess
 
 import ansible
 
-from acme.cmds import require_commands, find_playbook_path, find_acme_project, find_inventorypath
+from acme import ANSIBLE_CONFIG_FILE, ENCFS_PREFIX, SECRET_NAME, padlock_unlock, padlock_lock
+from acme.config import read_config
+from acme.cmds import require_commands, find_playbook_path, find_acme_project, find_inventorypath, INSECURE
+
+
 
 PATHSEP = ':'
 
@@ -32,3 +37,99 @@ def write_config(filename, config):
         print(ConfigFileHeader, file=fh)
         cfgparser.write(fh)
 
+
+def gen_ansible_cfg(filename, config, project_root, playbooks_path, inventory_path):
+    def custom_paths(type):
+        if type in defaults:
+            yield defaults[type]
+        yield os.path.join(project_root, "ansible", type)
+        yield os.path.join(playbooks_path, type)
+        yield os.path.join("/usr/share/ansible/", type)
+
+    cfg = dict((sect.split(None, 1)[1], pairs) for sect, pairs in config.items() if sect.startswith('ansible'))
+
+    defaults = cfg.setdefault('defaults', {})
+    defaults['hostfile'] = inventory_path
+    defaults['roles_path'] = PATHSEP.join(filter(None, (
+        defaults.get('roles_path'),
+        os.path.join(project_root, "roles"),
+        os.path.join(project_root, "ansible", "roles"),
+        os.path.join(playbooks_path, "..", "roles"),
+        os.path.join(playbooks_path, "roles"),
+        "/etc/ansible/roles")))
+
+    for plugin_type in ('action', 'callback', 'connection', 'filter', 'lookup', 'vars'):
+        plugin_type = plugin_type+"_plugins"
+        defaults[plugin_type] = PATHSEP.join(custom_paths(plugin_type))
+
+        if ansible.__version__ >= "1.7":
+            if ' ' in defaults[plugin_type]:
+                defaults[plugin_type] = PATHSEP.join('"%s"' % p for p in defaults[plugin_type].split(PATHSEP))
+
+    defaults['library'] = PATHSEP.join(custom_paths('library'))
+
+    write_config(filename, cfg)
+
+
+def main(cmd_args):
+    project_root = find_acme_project(required=True)
+    config = read_config(project_root)
+    playbooks_path = find_playbook_path(config, project_root, required=True)
+
+    require_commands('ansible-playbook')
+
+    def find_playbook(playbook):
+        tries = [
+            (project_root, "playbooks", playbook),
+            (project_root, "ansible", "playbooks", playbook),
+            (playbooks_path, playbook),
+        ]
+
+        if 'playbook_path' in config['paths']:
+            tries += [(custom_path, playbook) for custom_path in config['paths']['playbooks_path'].split(PATHSEP)]
+
+        for parts in tries:
+            play = os.path.join(*parts)
+            if os.path.isfile(play):
+                return play
+
+    play = None
+    if len(cmd_args) > 0:
+        maybe_play = cmd_args[0]
+        if os.path.isfile(maybe_play):
+            play = maybe_play
+        else:
+            play = find_playbook(maybe_play)
+
+        if play:
+            cmd_args.pop(0)
+        del maybe_play
+
+    if not play:
+        play = find_playbook('site.yml')
+
+    inventory_path = find_inventorypath(project_root)
+    os.environ['ANSIBLE_HOSTS'] = inventory_path
+
+    ansible_config_file = os.path.join(project_root, ANSIBLE_CONFIG_FILE)
+    os.environ['ANSIBLE_CONFIG'] = os.path.abspath(ansible_config_file)
+    gen_ansible_cfg(ansible_config_file, config, project_root, playbooks_path, inventory_path)
+
+    if INSECURE:
+        os.environ['ANSIBLE_HOST_KEY_CHECKING'] = 'False'
+
+    encfs_encrypted = os.path.join(os.path.dirname(inventory_path), ENCFS_PREFIX + SECRET_NAME)
+    revert_unlock = padlock_unlock(encfs_encrypted)
+
+    try:
+        print("Running Ansible playbook from:")
+        print(play, "...")
+        return subprocess.call(['ansible-playbook', play] + cmd_args)
+    finally:
+        if revert_unlock:
+            padlock_lock(encfs_encrypted)
+
+try:
+    sys.exit(main(sys.argv[1:]))
+except KeyboardInterrupt:
+    raise SystemExit('... Aborted')
