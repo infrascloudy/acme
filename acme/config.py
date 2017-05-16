@@ -53,6 +53,7 @@ def _get_config_filenames():
         configdirs.reverse()
     return [os.path.join(d, 'acme.cfg') for d in configdirs]
 
+
 _configfiles = _get_config_filenames()
 
 
