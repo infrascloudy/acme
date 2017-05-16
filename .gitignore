@@ -266,7 +266,6 @@ dist
 build
 eggs
 parts
-bin
 var
 sdist
 deb_dist
