@@ -121,3 +121,10 @@ Authors
 
 * InfrasCloudy
 * Allanice001
+
+..
+ Local Variables:
+ mode: rst
+ ispell-local-dictionary: "american"
+ End:
+
