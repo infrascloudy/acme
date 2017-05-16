@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ -z "$(which acme-padlock 2>/dev/null)" ]; then
+    echo "Command 'acme-padlock' is missing, please install InfrasCloudy's acme toolbox."
+    echo "See http://InfrasCloudy.github.io for more information."
+    exit 10
+fi
+
+acme-padlock "$@" -- verbose
