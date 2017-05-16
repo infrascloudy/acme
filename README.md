@@ -7,7 +7,7 @@ Acme
 
 **Your Linux-based data center in a box**
 
-A collection of `Ansible <https://ansible.com/>`__ playbooks, scalable
+A collection of [Ansible](https://ansible.com/) playbooks, scalable
 from one container to an entire data center.
 
 Acme as a framework
@@ -65,25 +65,24 @@ Building Acme
 As it is an all-in-one solution, the tools used are rather opinionated.
 They include:
 
--  `Paver <http://paver.github.io/paver/>`__ for running miscellaneous
+-  [Paver](http://paver.github.io/paver/) for running miscellaneous
    tasks
--  `Setuptools <http://pythonhosted.org/setuptools/merge.html>`__ for
+-  [Setuptools](http://pythonhosted.org/setuptools/merge.html) for
    distribution (Setuptools and
-   `Distribute <http://pythonhosted.org/distribute/>`__ have
-   `merged <http://pythonhosted.org/setuptools/merge.html>`__)
--  `Sphinx <http://sphinx-doc.org/>`__ for documentation
--  `flake8 <https://pypi.python.org/pypi/flake8>`__ for source code
+   [Distribute](http://pythonhosted.org/distribute/) have
+   [merged](http://pythonhosted.org/setuptools/merge.html))
+-  [Sphinx](http://sphinx-doc.org/) for documentation
+-  [flake8](https://pypi.python.org/pypi/flake8) for source code
    checking
--  `pytest <http://pytest.org/latest/>`__ for unit testing
--  `mock <http://www.voidspace.org.uk/python/mock/>`__ for mocking (not
+-  [pytest](http://pytest.org/latest/) for unit testing
+-  [mock](http://www.voidspace.org.uk/python/mock/) for mocking (not
    required by the template, but included anyway)
--  `tox <http://testrun.org/tox/latest/>`__ for testing on multiple
+-  [tox](http://testrun.org/tox/latest/) for testing on multiple
    Python versions
 
 If you are new to Python or new to creating Python projects, see Kenneth
-Reitz's `Hitchhiker's Guide to
-Python <http://docs.python-guide.org/en/latest/>`__ for an explanation
-of some of the tools used here.
+Reitz's [Hitchhiker's Guide to
+Python](http://docs.python-guide.org/en/latest/) for an explanation of some of the tools used here.
 
 Licenses
 --------
