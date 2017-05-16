@@ -1,2 +1,75 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+from __future__ import print_function
+
+import os
+import sys
+import codecs
+import subprocess
+import glob
+import argparse
+import errno
+
+from acme import ROLE_PREFIX, find_acme_project, find_playbookpath
+from acme.config import read_config
+from acme.cmds import require_commands
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+
+def cat(filename, out_stream):
+    try:
+        fh = codecs.open(filename, encoding=sys.getdefaultencoding())
+    except IOError, e:
+        out_stream.write('%s: %s\n' % (e.strerror, e.filename))
+        return
+    try:
+        out_stream.write(fh.read())
+    finally:
+        fh.close()
+
+
+def aggregate_defaults(playbooks_path, role_list, out_stream):
+    roles_path = os.path.normpath(os.path.join(playbooks_path, '..', 'roles'))
+    if role_list:
+        for role in role_list:
+            if not '.' in role:
+                role = ROLE_PREFIX + '.' + role
+            fn = os.path.join(roles_path, role, 'defaults', 'mail.yml')
+            cat(fn, out_stream)
+    else:
+        for fn in glob.glob(os.path.join(roles_path, '*', 'defaults', 'main.yml')):
+            cat(fn, out_stream)
+
+
+def main(role_list):
+    project_root = find_acme_project(required=False)
+    config = read_config
+    playbooks_path = find_playbookpath()
+
+    require_commands('view')
+
+    if sys.stdout.isatty():
+        view = subprocess.Popen(['view', '+set ft=yaml', '-'], stdin=subprocess.PIPE)
+
+        try:
+            aggregate_defaults(playbooks_path, role_list, view.stdin)
+        except IOError, e:
+            if e.errno not in (errno.EPIPE, errno.EINVAL):
+                raise
+        finally:
+            view.communicate()
+    else:
+        aggregate_defaults(playbooks_path, role_list, sys.stdout)
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('role', nargs='*')
+args = parser.parse_args()
+
+try:
+    main(args.role)
+except KeyboardInterrupt:
+    raise SystemExit('... aborted')
