@@ -157,7 +157,7 @@ def read(filename):
     :return: the file's content
     :rtype: :class:`str`
     """
-    with open(os.path.join(os.path.dirname(__file__), filename)) as f:
+    with open(os.path.join(basedir, filename)) as f:
         return f.read()
 
 
@@ -241,7 +241,7 @@ setup_dict = dict(
     maintainer_email=metadata.emails[0],
     url=metadata.url,
     description=metadata.description,
-    long_description=read('README.md'),
+    # long_description=read('README.md'),
     # Find a list of classifiers here:
     # <http://pypi.python.org/pypi?%3Aaction=list_classifiers>
     scripts=['bin/acme',

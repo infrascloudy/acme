@@ -1,13 +1,9 @@
 Acme
 ====
 
-.. contents::
-   :depth: 3
-..
+[![Build Status](https://travis-ci.org/infrascloudy/acme.svg?branch=master)](https://travis-ci.org/infrascloudy/acme)
 
-|image|
-
-|CII Best Practices|
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/966/badge)](https://bestpractices.coreinfrastructure.org/projects/966)
 
 **Your Linux-based data center in a box**
 
@@ -124,8 +120,3 @@ Authors
 
 -  InfrasCloudy
 -  Allanice001
-
-.. |image| image:: https://travis-ci.org/infrascloudy/acme.svg?branch=master
-   :target: https://travis-ci.org/infrascloudy/acme
-.. |CII Best Practices| image:: https://bestpractices.coreinfrastructure.org/projects/237/badge
-   :target: https://bestpractices.coreinfrastructure.org/projects/237
