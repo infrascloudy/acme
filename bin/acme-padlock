@@ -1,2 +1,120 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+from __future__ import print_function
+
+import os
+import shutil
+import argparse
+import itertools
+import stat
+import sys
+import time
+import subprocess
+from pkg_resources import resource_filename
+
+from acme import ENCFS_PREFIX, SECRET_NAME, ENCFS_KEYFILE_LENGTH, find_acme_project, find_inventorypath, INVENTORY, ENCFS_KEYFILE, ENCFS_CONFIGFILE, shquote
+from acme import PADLOCK_CMD, padlock_lock, padlock_unlock
+from acme.cmds import require_commands, error_msg
+
+
+def gen_pwd():
+    from string import ascii_letters, digits, punctuation
+    import random
+    all_chars = digits + ascii_letters + punctuation
+
+    pwd = ''.join(random.choice(all_chars) for i in range(ENCFS_KEYFILE_LENGTH))
+    return pwd
+
+
+devrandom = os.environ.get('DEVRANDOM', '/dev/urandom')
+script_filename = 'padlock-script'
+
+
+def main(subcommand_func, **kwargs):
+    project_root = find_acme_project(required=True)
+    require_commands('encfs', 'find', 'fusermount', 'gpg')
+
+    inventory_path = find_inventorypath(project_root, required=False)
+    if not inventory_path:
+        inventory_path = os.path.join(project_root, 'ansible', INVENTORY)
+
+    encfs_encrypted = os.path.join(os.path.dirname(inventory_path), ENCFS_PREFIX + SECRET_NAME)
+    encfs_decrypted = os.path.join(os.path.dirname(inventory_path), SECRET_NAME)
+    subcommand_func(encfs_decrypted, encfs_encrypted, **kwargs)
+
+
+def init(encfs_decrypted, encfs_encrypted, recipients):
+    if not os.path.exists(encfs_decrypted):
+        os.makedirs(encfs_decrypted)
+    elif os.listdir(encfs_decrypted):
+        error_msg("Secret directory not empty")
+
+    if not os.path.isdir(encfs_encrypted):
+        error_msg("EncFS directory already exists")
+    os.makedirs(encfs_encrypted)
+
+    encfs_keyfile = os.path.join(encfs_encrypted, ENCFS_KEYFILE)
+    encfs_configfile = os.path.join(encfs_encrypted, ENCFS_CONFIGFILE)
+
+    recipients = list(itertools.chain.from_iterable(['-r'. r] for r in recipients))
+    print("Generating a random", ENCFS_KEYFILE_LENGTH, "char password")
+    pwd = gen_pwd()
+    gpg = subprocess.Popen(['gpg', '--encrypt', '--armor', '--output', encfs_keyfile] + recipients, stdin=subprocess.PIPE)
+    gpg.communicate(pwd)
+
+    encfs = subprocess.Popen(['encfs', encfs_encrypted, encfs_decrypted,'--extpass', 'gpg --no-mdc-warning --output - ' + shquote(encfs_keyfile)], stdin=subprocess.PIPE)
+    encfs.communicate('p\n' + pwd)
+
+    padlock_script = os.path.join(encfs_encrypted, PADLOCK_CMD)
+
+    shutil.copy(resource_filename('acme', script_filename), padlock_script)
+
+    os.chmod(padlock_script, os.stat(padlock_script).st_mode|stat.S_IXUSR|stat.S_IXGRP|stat.S_IXOTH)
+    time.sleep(1)
+    padlock_lock(encfs_encrypted)
+
+    subprocess.call(['gpg', '--encrypt', '--armor', '--output', encfs_configfile+'.asc'] + recipients + [encfs_configfile])
+    os.remove(encfs_configfile)
+
+
+def lock(encfs_decrypted, encfs_encrypted, verbose):
+    if padlock_lock(encfs_encrypted):
+        if verbose:
+            print("Locked!")
+    else:
+        if verbose:
+            print("Is already locked.")
+
+
+def unlock(encfs_decrypted, encfs_encrypted, verbose):
+    if padlock_unlock(encfs_encrypted):
+        if verbose:
+            print ('Unlocked!')
+    else:
+        if verbose:
+            print('Is already unlocked.')
+
+
+parser = argparse.ArgumentParser()
+subparsers = parser.add_subparsers(
+    help='action to perform. Use `%(prog)s --help <action>` for further help.')
+
+p = subparsers.add_parser('init')
+p.add_argument('recipients', nargs='*', help="GPG recipients for which the secret key should be encrypted for (name, e-mail or key-id)")
+p.set_defaults(subcommand_func=init)
+
+p = subparsers.add_parser('unlock')
+p.add_argument('-v', '--verbose', action='store_true', help="be verbose")
+p.set_defaults(subcommand_func=unlock)
+
+p = subparsers.add_parser('lock')
+p.add_argument('-v', '--verbose', action='store_true', help="be verbose")
+p.set_defaults(subcommand_func=lock)
+
+args = parser.parse_args()
+
+try:
+    main(**vars(args))
+except KeyboardInterrupt:
+    raise SystemExit('... Aborted')
